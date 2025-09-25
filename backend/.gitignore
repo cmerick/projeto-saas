@@ -1,0 +1,38 @@
+# Node
+node_modules/
+pnpm-lock.yaml
+
+# Build
+dist/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma
+prisma/dev.db
+prisma/*.db-journal
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tests
+coverage/
+.vitest/
+
+# OS
+.DS_Store
+Thumbs.db
