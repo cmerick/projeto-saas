@@ -1,0 +1,208 @@
+//schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  AGENT
+}
+
+enum DealStage {
+  NEW
+  CONTACTED
+  VISIT
+  PROPOSAL
+  WON
+  LOST
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+enum Plan {
+  FREE
+  PRO
+  NUSINESS
+}
+
+enum InteractionType {
+  CALL
+  WHATSAPP
+  VISIT
+  EMAIL
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  mermberships Membership[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Team {
+  id             String        @id @default(uuid())
+  name           String
+  plan           Plan          @default(FREE)
+  planValidUntil DateTime?
+  members        Membership[]
+  leads          Lead[]
+  properties     Property[]
+  deal           Deal[]
+  tasks          Task[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  Interaction    Interaction[]
+  ShareLink      ShareLink[]
+}
+
+model Membership {
+  id     String @id @default(uuid())
+  userId String
+  teamId String
+  role   Role   @default(AGENT)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+}
+
+model Lead {
+  id           String        @id @default(uuid())
+  teamId       String
+  name         String
+  phone        String?
+  email        String?
+  preferences  Json?
+  stage        DealStage     @default(NEW)
+  source       String?
+  notes        String?
+  interactions Interaction[]
+  deals        Deal[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  team         Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Task         Task[]
+}
+
+model Property {
+  id              String            @id @default(uuid())
+  teamId          String
+  title           String
+  description     String?
+  price           Decimal           @db.Decimal(15, 2)
+  listingType     ListingType
+  propertyType    PropertyType
+  address         String?
+  lat             Decimal?          @db.Decimal(9, 6)
+  lng             Decimal?          @db.Decimal(9, 6)
+  bedrooms        Int?
+  bathrooms       Int?
+  areaM2          Int?
+  isPublic        Boolean           @default(false)
+  images          PropertyImage[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  team            Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  Deal            Deal[]
+  ShareLink       ShareLink[]
+  PropertyAddress PropertyAddress[]
+}
+
+model PropertyAddress {
+  id         String   @id @default(uuid())
+  propertyId String   @unique
+  street     String?
+  number     String?
+  complement String?
+  district   String? //bairro
+  city       String?
+  state      String?
+  country    String?  @default("Brasil")
+  zipCode    String?
+  lat        Decimal? @db.Decimal(9, 6)
+  lng        Decimal? @db.Decimal(9, 6)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid())
+  propertyId String
+  url        String
+  sortOrder  Int      @default(0)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model Deal {
+  id           String        @id @default(uuid())
+  teamId       String
+  leadId       String
+  propertyId   String?
+  stage        DealStage     @default(NEW)
+  amount       Decimal?      @db.Decimal(15, 2)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  team         Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  lead         Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  property     Property?     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  interactions Interaction[]
+  Task         Task[]
+}
+
+model Interaction {
+  id      String           @id @default(uuid())
+  teamId  String
+  leadId  String?
+  dealId  String?
+  type    InteractionType?
+  content String?
+  at      DateTime         @default(now())
+  team    Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  lead    Lead?            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal    Deal?            @relation(fields: [dealId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id        String    @id @default(uuid())
+  teamId    String
+  title     String
+  dueAt     DateTime?
+  done      Boolean   @default(false)
+  leadId    String?
+  dealId    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  lead      Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+}
+
+model ShareLink {
+  id         String    @id @default(uuid())
+  teamId     String
+  propertyId String
+  slug       String    @unique // ex: curto p/ link público
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
